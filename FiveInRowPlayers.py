@@ -218,7 +218,7 @@ class MinimaxPlayer(FiveInRowPlayer):
 
         #list of starting points and directions for getOneDiagonal
         #initialize with the two center diagonals
-        diagonalParamList = [(0, 0, 1, 1), (size, size, -1, -1)]
+        diagonalParamList = [(0, 0, 1, 1), (size, size, -1, 1)]
 
         for p in range(1, size+1):
             diagonalParamList += [(0, p, 1, 1), (p, 0, 1, 1)] #north-east diagonals
@@ -231,10 +231,56 @@ class MinimaxPlayer(FiveInRowPlayer):
 
         return diags
 
-    def evaulateLine(self, line):
-        return line.count(self.mark) - line.count(self.opponentMark)
+    def evaluateLine(self, line, myTurn):
 
-    def evaluateBoard(self, board):
+        lineLen = len(line)
+        if lineLen < 5:
+            return 0
+
+        idx=0
+        while line[idx] == '.':
+            idx +=1
+            if idx >= lineLen:
+                return 0
+
+        scoreTable = [0, 1, 2, 50, 200, 1000, 1000, 1000]
+
+        startIdx = idx
+        markToSearch = line[idx]
+        marksFound = 1
+        patternLen = 0
+        scoreFactor = 1
+
+        if myTurn and markToSearch == self.opponentMark:
+            scoreFactor = -1
+
+        for c in line[idx:]:
+            if c == markToSearch:
+                marksFound += 1
+            elif c == '.':
+                pass
+            else: #opponent mark
+                break
+
+            patternLen+=1
+            if patternLen > 6:
+                break
+
+        if patternLen < 5:
+            scoreFactor *= 0
+
+        elif patternLen >= 5 and startIdx > 0:
+            scoreFactor *= 10
+
+        if startIdx > 0: startIdx -= 1
+        nextIdx = startIdx + patternLen
+        score = scoreTable[marksFound] * scoreFactor
+        score += self.evaluateLine(line[nextIdx:], myTurn)
+
+        return score
+
+
+    def evaluateBoard(self, board, myTurn):
         lines = []
         lines += self.getRows(board)
         lines += self.getCols(board)
@@ -242,7 +288,7 @@ class MinimaxPlayer(FiveInRowPlayer):
 
         score = 0
         for line in lines:
-            score += self.evaulateLine(line)
+            score += self.evaluateLine(line, myTurn)
         return score
 
     def cloneBoard(self, board, x, y, myTurn):
@@ -260,7 +306,7 @@ class MinimaxPlayer(FiveInRowPlayer):
 
     def minimax(self, board, lastMove, depth, maximizing):
         if self.isGameOver(board, lastMove) or depth == 0:
-            return self.evaluateBoard(board), (-1,-1)
+            return self.evaluateBoard(board, maximizing), (-1,-1)
 
         moves = self.getPossibleMoves(board)
         bestMove = moves[0]
