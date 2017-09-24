@@ -1,4 +1,5 @@
-from FiveInRowPlayers import HumanPlayer, MinimaxPlayer
+from FiveInRowPlayers import HumanPlayer
+from MinimaxPlayer import MinimaxPlayer
 
 class FiveInRow:
 
