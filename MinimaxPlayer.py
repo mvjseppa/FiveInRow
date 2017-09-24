@@ -67,32 +67,42 @@ class MinimaxPlayer(FiveInRowPlayer):
 
     def evaluateLine(self, line, myTurn):
 
+        print(line, end=' ')
         lineLen = len(line)
         if lineLen < 5:
+            print(0)
             return 0
 
         idx=0
         while line[idx] == '.':
             idx +=1
             if idx >= lineLen:
+                print(0)
                 return 0
 
-        scoreTable = [0, 1, 2, 50, 200, 1000, 1000, 1000]
+        scoreTable = [0, 1, 2, 10, 50, 10000, 10000]
+        score = 0
 
         startIdx = idx
         markToSearch = line[idx]
+        idx+=1
         marksFound = 1
-        patternLen = 0
+        patternLen = 1
+        lenContinuous = 1
+        contPatternLens = []
         scoreFactor = 1
 
-        if myTurn and markToSearch == self.opponentMark:
-            scoreFactor = -1
+        if myTurn and markToSearch != self.mark:
+            scoreFactor = -2
 
         for c in line[idx:]:
             if c == markToSearch:
                 marksFound += 1
+                lenContinuous += 1
             elif c == '.':
-                pass
+                contPatternLens.append(lenContinuous)
+                lenContinuous = 0
+
             else: #opponent mark
                 break
 
@@ -100,17 +110,20 @@ class MinimaxPlayer(FiveInRowPlayer):
             if patternLen > 6:
                 break
 
-        if patternLen < 5:
+        contPatternLens.append(lenContinuous)
+        patternPotLen = patternLen + startIdx
+
+        if patternPotLen < 5:
             scoreFactor *= 0
 
-        elif patternLen >= 5 and startIdx > 0:
+        elif patternPotLen >= 6 and startIdx > 0 and 3 <= max(contPatternLens) <= 4:
             scoreFactor *= 10
 
-        if startIdx > 0: startIdx -= 1
-        nextIdx = startIdx + patternLen
-        score = scoreTable[marksFound] * scoreFactor
-        score += self.evaluateLine(line[nextIdx:], myTurn)
+        for l in contPatternLens:
+            score += scoreTable[l] * scoreFactor
+        score += self.evaluateLine(line[(startIdx + patternLen):], myTurn)
 
+        print(score)
         return score
 
 
@@ -168,5 +181,5 @@ class MinimaxPlayer(FiveInRowPlayer):
         if not self.game.onBoard(*move):
             exit(-1)
 
-        print(move)
+        #print(move)
         return move

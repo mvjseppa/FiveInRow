@@ -1,5 +1,4 @@
 import random
-import FiveInRow
 from abc import ABC, abstractmethod
 
 class FiveInRowPlayer(ABC):
@@ -30,6 +29,9 @@ class FiveInRowPlayer(ABC):
         pass
 
     def notifyDraw(self):
+        pass
+
+    def notifyMoveOk(self):
         pass
 
 
@@ -65,6 +67,11 @@ class HumanPlayer(FiveInRowPlayer):
     def notifyDraw(self):
         self.printBoard()
         print("It's a draw" + self.name + "!")
+
+    def notifyMoveOk(self):
+        self.printBoard()
+        #print("Move ok, press enter to continue...")
+        #input()
 
 class RandomPlayer(FiveInRowPlayer):
     def requestMove(self):
@@ -145,7 +152,3 @@ class ShallowAiPlayer(FiveInRowPlayer):
 
     def requestMove(self):
         return self.evaluateBoard()
-
-
-if __name__ == "__main__":
-    FiveInRow.main()
