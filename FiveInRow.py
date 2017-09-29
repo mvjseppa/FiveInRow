@@ -5,22 +5,24 @@ class FiveInRow:
 
     def __init__(self, player1, player2):
         self.size = 15
-        self.board = [x[:] for x in [['.'] * self.size] * self.size]
+        #self.board = [[0] * self.size] * self.size
+        self.board = [x[:] for x in [[0] * self.size] * self.size]
         #self.board = []
         #for _ in range(self.size): self.board.append('.'*self.size)
 
-        player1.setMarks('X', 'O')
-        player2.setMarks('O', 'X')
+        player1.setNumber(1)
+        player2.setNumber(2)
         self.players = (player1, player2)
         for player in self.players: player.setGame(self)
         self.turn = 0
         self.lastMove = (-1, -1)
+        self.moves = []
 
     def getBoardPos(self, x, y):
-        return self.board[x][y]
+        return self.board[y][x]
 
     def setBoardPos(self, x, y , mark):
-        self.board[x][y] = mark
+        self.board[y][x] = mark
 
     def changeTurn(self):
         self.players = self.players[1], self.players[0]
@@ -37,7 +39,7 @@ class FiveInRow:
             [1, -1] #diagonal 2
         ]
 
-        mark = board[x0][y0]
+        mark = board[y0][x0]
 
         for direction in directions:
             dx, dy = direction
@@ -45,7 +47,7 @@ class FiveInRow:
             marksInRow = 0
 
             for _ in range(2):
-                while self.onBoard(x, y) and board[x][y] == mark:
+                while self.onBoard(x, y) and board[y][x] == mark:
                     x += dx
                     y += dy
                     marksInRow += 1
@@ -55,9 +57,6 @@ class FiveInRow:
                 dy *= -1
                 x = x0 + dx
                 y = y0 + dy
-
-            if self.players[0].mark == 'X':
-                print(direction, marksInRow)
 
             if marksInRow >= 5:
                 return True
@@ -71,10 +70,11 @@ class FiveInRow:
             if not self.onBoard(*move):
                 continue
 
-            if self.getBoardPos(*move) == '.':
-                self.setBoardPos(*move, self.players[0].mark)
+            if self.getBoardPos(*move) == 0:
+                self.setBoardPos(*move, self.players[0].number)
                 self.turn += 1
                 self.lastMove = move
+                self.moves.append(move)
                 moveDone = True
 
         if self.turn >= self.size**2:
@@ -91,14 +91,13 @@ class FiveInRow:
         return True #game continues
 
     def __str__(self):
-        s = ""
-        for row in self.board:
-            s += "".join(row) + '\n'
-        return s
+        marks = ['.', 'X', 'O']
+        return '\n'.join([''.join([marks[item] for item in row]) for row in self.board])
 
 
 def main():
     p1 = HumanPlayer("Mikko")
+    #p2 = HumanPlayer("Kaisa")
     p2 = MinimaxPlayer()
 
     game = FiveInRow(p1, p2)

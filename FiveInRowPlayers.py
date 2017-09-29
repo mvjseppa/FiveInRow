@@ -3,17 +3,21 @@ from abc import ABC, abstractmethod
 
 class FiveInRowPlayer(ABC):
     def __init__(self):
-        self.mark = 'X'
-        self.opponentMark = 'O'
+        self.number = 1
+        self.opponentNumber = 2
         self.game = None
         super().__init__()
 
     def setGame(self, game):
         self.game = game
 
-    def setMarks(self, mark, opponentMark):
-        self.mark = mark
-        self.opponentMark = opponentMark
+    def setNumber(self, number):
+        if number == 1:
+            self.number = 1
+            self.opponentNumber = 2
+        else:
+            self.number = 2
+            self.opponentNumber = 1
 
     @abstractmethod
     def requestMove(self):
@@ -86,7 +90,7 @@ class ShallowAiPlayer(FiveInRowPlayer):
 
         for x in range(0, self.game.size):
             for y in range(0, self.game.size):
-                if self.game.board[x][y] != '.':
+                if self.game.board[y][x] != '.':
                     continue
 
                 value = self.evaluateMove((x,y))
@@ -111,7 +115,7 @@ class ShallowAiPlayer(FiveInRowPlayer):
             elif tight and count == 0:
                 break
 
-            elif self.game.getBoardPos((x,y)) != '.':
+            elif self.game.getBoardPos((x,y)) != 0:
                 break #these are not the marks you are looking for
 
         return count
@@ -129,16 +133,21 @@ class ShallowAiPlayer(FiveInRowPlayer):
         for d in directions:
             dNeg = (d[0]*-1, d[1]*-1)
 
-            #count my marks
-            myMarks = (self.countMarksInDirection(move, d, self.mark) +
-                    self.countMarksInDirection(move, dNeg, self.mark))
+            opponentNumber = 2
+            if self.number == 2:
+                opponentNumber = 1
 
-            myMarksTight = max(self.countMarksInDirection(move, d, self.mark, tight=True),
-                    self.countMarksInDirection(move, dNeg, self.mark, tight=True))
+
+            #count my marks
+            myMarks = (self.countMarksInDirection(move, d, self.number) +
+                    self.countMarksInDirection(move, dNeg, self.number))
+
+            myMarksTight = max(self.countMarksInDirection(move, d, self.number, tight=True),
+                    self.countMarksInDirection(move, dNeg, self.number, tight=True))
 
             #count opponent's marks
-            oppMarks = max(self.countMarksInDirection(move, d, self.opponentMark, tight=True),
-                    self.countMarksInDirection(move, dNeg, self.opponentMark, tight=True))
+            oppMarks = max(self.countMarksInDirection(move, d, opponentNumber, tight=True),
+                    self.countMarksInDirection(move, dNeg, opponentNumber, tight=True))
 
             if oppMarks >= 2:
                 value += oppMarks*10
