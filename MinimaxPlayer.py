@@ -11,7 +11,7 @@ class MinimaxPlayer(FiveInRowPlayer):
         super().setGame(game)
         self.gameStatus = MinimaxStatus(game.board, 0)
 
-    def minimax(self, gameStatus, depth, maximizing):
+    def minimax(self, gameStatus, depth, alpha, beta, maximizing):
 
         if gameStatus.gameOver or depth == 0:
             return gameStatus.score, (-1,-1)
@@ -27,23 +27,28 @@ class MinimaxPlayer(FiveInRowPlayer):
         for move in moves:
             clone = copy.deepcopy(gameStatus)
 
-            if maximizing: clone.update(*move, self.number)
-            else: clone.update(*move, self.opponentNumber)
+            if maximizing: clone.update(*move, 1)
+            else: clone.update(*move, 2)
 
-            score = self.minimax(clone, depth-1, not maximizing)[0]
+            score = self.minimax(clone, depth-1, alpha, beta, not maximizing)[0]
             if maximizing and score > bestScore:
                 bestScore = score
+                alpha = max(alpha, bestScore)
                 bestMove = move
             elif not maximizing and score < bestScore:
                 bestScore = score
                 bestMove = move
+                beta = min(beta, bestScore)
+
+            if beta <= alpha:
+                break
 
         print(depth, len(moves), bestScore)
         return bestScore, bestMove
 
     def requestMove(self):
         self.gameStatus.update(*(self.game.lastMove), self.opponentNumber)
-        move = self.minimax(self.gameStatus, 5, self.number==1)[1]
+        move = self.minimax(self.gameStatus, 5, -200000, 200000, self.number==1)[1]
 
         if not self.gameStatus.onBoard(*move):
             print("Minimax move not on board!")
