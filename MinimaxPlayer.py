@@ -4,30 +4,28 @@ from FiveInRowPlayers import FiveInRowPlayer
 
 class MinimaxPlayer(FiveInRowPlayer):
 
-    def __init__(self):
+    def __init__(self, depth):
         super().__init__()
         self.gameStatus = None
-        self.searchDepth = 3
+        self.searchDepth = depth
         self.transpTable = dict()
         self.transpTablePrev = dict()
         self.nodeNo = 0
 
     def setGame(self, game):
         super().setGame(game)
-        self.gameStatus = MinimaxStatus(game.board, 0, 0)
+        self.gameStatus = MinimaxStatus(game.board, game.turn)
 
     def minimax(self, gameStatus, depth, alpha, beta, maximizing):
-        self.nodeNo += 1
-        print(self.nodeNo)
 
         if gameStatus.gameOver or depth == 0:
-            return gameStatus.getScore(maximizing), (-1,-1)
+            score = gameStatus.getScore(maximizing)
+            return score, (-1,-1)
 
         statusKey = gameStatus.key()
         try:
             #if this position is already searched, return result from transposition
             result = self.transpTable[statusKey]
-            print("transp")
             return result
         except KeyError:
             pass
@@ -77,12 +75,16 @@ class MinimaxPlayer(FiveInRowPlayer):
         #return bestScore, bestMove
 
     def requestMove(self):
-        self.gameStatus.update(*(self.game.lastMove), self.opponentNumber)
+        if self.game.lastMove is not None:
+            self.gameStatus.update(*(self.game.lastMove), self.opponentNumber)
+
         self.nodeNo = 0
 
         self.transpTablePrev = self.transpTable
         self.transpTable = dict()
-        move = self.minimax(self.gameStatus, self.searchDepth, -200000, 200000, self.number==1)[1]
+        score, move = self.minimax(self.gameStatus, self.searchDepth, -200000, 200000, self.number==1)
+
+        print("minimax result:", score, move)
 
         if not self.gameStatus.onBoard(*move):
             print("Minimax move not on board!")
@@ -93,21 +95,16 @@ class MinimaxPlayer(FiveInRowPlayer):
             exit(-1)
 
         self.gameStatus.update(*move, self.number)
-        print("minimax board: \n",str(self.gameStatus), "\n\n")
+        #print("minimax board: \n",str(self.gameStatus), "\n\n")
 
-        #print(move)
         return move
 
 class MinimaxStatus:
-    def __init__(self, board, score, depth):
+    def __init__(self, board, turnNo):
         self.size = len(board)
         self.board = copy.deepcopy(board)
-        #self.possibleMoves = self.possibleMoves() #copy.copy(possibleMoves)
-        self.score = score
-        self.depth = depth
         self.gameOver = False
-        self.bestPatternP1 = 0
-        self.bestPatternP2 = 0
+        self.turnNo = turnNo
 
     def key(self):
         return str(self.board)
@@ -116,19 +113,58 @@ class MinimaxStatus:
         return 0 <= x < self.size and 0 <= y < self.size
 
     def getScore(self, maximizing):
-        if self.bestPatternP1 == 0 and self.bestPatternP2 == 0:
-            return 0
 
-        if maximizing: #player 2 has just played
-            if self.bestPatternP2 >= 5:
-                return -100
-            else:
-                return (self.bestPatternP1 + 2) - (self.bestPatternP2)
-        else: #player 1 has just played
-            if self.bestPatternP1 >= 5:
-                return 100
-            else:
-                return self.bestPatternP1 - (self.bestPatternP2 + 2)
+        lines = []
+        ev = dict()
+        ev["P1"] = self.PlayerScore()
+        ev["P2"] = self.PlayerScore()
+
+        for x in range(self.size):
+            lines.append(self.getDiagonal(x, 0, 1, 1))
+            lines.append(self.getDiagonal(x, 0, -1, 1))
+
+        for x in range(self.size-1):
+            lines.append(self.getDiagonal(0, x+1, 1, 1))
+            lines.append(self.getDiagonal(self.size-1, x+1, -1, 1))
+
+        for row in self.board:
+            lines.append(''.join([str(item) for item in row]))
+
+        for row in zip(*(self.board)):
+            lines.append(''.join([str(item) for item in row]))
+
+        for line in lines: self.evaluateLine(line, ev)
+
+        score = 0
+
+        lastPlr, nextPlr = "P2", "P1"
+        if not maximizing:
+            lastPlr, nextPlr = nextPlr, lastPlr
+
+        if ev[nextPlr].fives > 0:
+            score = -1000
+
+        elif ev[lastPlr].fives > 0:
+            score = 1000
+
+        elif ev[nextPlr].openFours > 0 or ev[nextPlr].fours > 0:
+            score = -100
+
+        elif ev[lastPlr].openFours > 0:
+            score = 100
+
+        elif ev[nextPlr].openThrees > 0 and ev[lastPlr].fours == 0:
+            score = -50
+
+        elif ev[lastPlr].openThrees + ev[lastPlr].fours > 1:
+            score = 50
+
+        else:
+            score = 10 * ev[lastPlr].openThrees + ev[lastPlr].openTwos
+
+        if maximizing: return -1 * score
+        return score
+
 
     def diagonalStartingPoints(self, x, y):
         x1, y1, x2, y2 = 0, 0, 0, 0
@@ -158,49 +194,31 @@ class MinimaxStatus:
         return strdiag
 
     def update(self, x, y, player):
-
         self.board[y][x] = int(player)
-        self.depth += 1
+        self.turnNo += 1
 
-        lines = []
+    def evaluateLine(self, line, ev):
 
-        for x in range(self.size):
-            lines.append(self.getDiagonal(x, 0, 1, 1))
-            lines.append(self.getDiagonal(self.size-1, x, -1, 1))
+        ev["P1"].fives += line.count("11111")
+        ev["P2"].fives += line.count("22222")
 
-        for row in self.board:
-            lines.append(''.join([str(item) for item in row]))
-
-        for row in zip(*(self.board)):
-            lines.append(''.join([str(item) for item in row]))
-
-        print(str(self))
-
-        for line in lines: self.evaluateLine(line)
-
-    def evaluateLine(self, line):
-
-        if line.count("11111"):
-            self.bestPatternP1 = 5
+        if ev["P1"].fives or ev["P2"].fives:
             self.gameOver = True
             return
 
-        if line.count("22222"):
-            self.bestPatternP2 = 5
-            self.gameOver = True
-            return
+        ev["P1"].openFours += line.count("011110")
+        ev["P2"].openFours += line.count("022220")
 
-        if line.count('011110') and self.bestPatternP1 < 4:
-            self.bestPatternP1 = 4
+        ev["P1"].fours += line.count("211110")
+        ev["P1"].fours += line.count("011112")
+        ev["P2"].fours += line.count("122220")
+        ev["P2"].fours += line.count("022221")
 
-        if line.count('01110') and self.bestPatternP1 < 3:
-            self.bestPatternP1 = 3
+        ev["P1"].openThrees += line.count("01110")
+        ev["P2"].openThrees += line.count("02220")
 
-        if line.count('022220') and self.bestPatternP1 < 4:
-            self.bestPatternP2 = 4
-
-        if line.count('02220') and self.bestPatternP1 < 3:
-            self.bestPatternP2 = 3
+        ev["P1"].openTwos += line.count("001100")
+        ev["P2"].openTwos += line.count("002200")
 
         return
 
@@ -221,10 +239,14 @@ class MinimaxStatus:
     def getPossibleMoves(self):
         moves = deque()
 
-        for x in range(self.size):
-            for y in range(self.size):
-                if self.isPossibleMove(x, y):
-                    moves.append((x,y))
+        if self.turnNo == 0:
+            mid = int(self.size/2)
+            moves.append((mid,mid))
+        else:
+            for x in range(self.size):
+                for y in range(self.size):
+                    if self.isPossibleMove(x, y):
+                        moves.append((x,y))
         return moves
 
     def moveNeighbours(self, x0, y0):
@@ -243,9 +265,9 @@ class MinimaxStatus:
         marks = ['.', 'X', 'O']
         return '\n'.join([''.join([marks[item] for item in row]) for row in self.board])
 
-class FiveInRowPatterns:
-    def __init__(self):
-        self.fives = 0
-        self.fours = 0
-        self.openFours = 0
-        self.openThrees = 0
+    class PlayerScore:
+        openFours = 0
+        fives = 0
+        fours = 0
+        openThrees = 0
+        openTwos = 0

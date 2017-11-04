@@ -1,4 +1,4 @@
-from FiveInRowPlayers import HumanPlayer
+from FiveInRowPlayers import *
 from MinimaxPlayer import MinimaxPlayer
 
 class FiveInRow:
@@ -13,9 +13,9 @@ class FiveInRow:
         player1.setNumber(1)
         player2.setNumber(2)
         self.players = (player1, player2)
-        for player in self.players: player.setGame(self)
         self.turn = 0
-        self.lastMove = (-1, -1)
+        for player in self.players: player.setGame(self)
+        self.lastMove = None
         self.moves = []
 
     def getBoardPos(self, x, y):
@@ -96,14 +96,18 @@ class FiveInRow:
 
 
 def main():
-    p1 = HumanPlayer("Mikko")
+    #p1 = HumanPlayer("Mikko")
     #p2 = HumanPlayer("Kaisa")
-    p2 = MinimaxPlayer()
+    #p1 = ShallowAiPlayer()
+    p1 = MinimaxPlayer(2)
+    p2 = MinimaxPlayer(3)
 
     game = FiveInRow(p1, p2)
 
     while game.tick():
         continue
+
+    print(str(game))
 
 if __name__ == "__main__":
     main()

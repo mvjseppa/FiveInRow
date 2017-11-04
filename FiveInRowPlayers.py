@@ -90,7 +90,7 @@ class ShallowAiPlayer(FiveInRowPlayer):
 
         for x in range(0, self.game.size):
             for y in range(0, self.game.size):
-                if self.game.board[y][x] != '.':
+                if self.game.board[y][x] != 0:
                     continue
 
                 value = self.evaluateMove((x,y))
@@ -106,16 +106,16 @@ class ShallowAiPlayer(FiveInRowPlayer):
             x += d[0]
             y += d[1]
 
-            if not self.game.onBoard((x,y)):
+            if not self.game.onBoard(x,y):
                 break
 
-            if self.game.getBoardPos((x,y)) == mark:
+            if self.game.getBoardPos(x,y) == mark:
                 count += 1
 
             elif tight and count == 0:
                 break
 
-            elif self.game.getBoardPos((x,y)) != 0:
+            elif self.game.getBoardPos(x,y) != 0:
                 break #these are not the marks you are looking for
 
         return count
