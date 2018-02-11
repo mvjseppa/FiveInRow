@@ -1,9 +1,12 @@
 from FiveInRowPlayers import *
 from MinimaxPlayer import MinimaxPlayer
+import threading
 
-class FiveInRow:
+class FiveInRow(threading.Thread):
 
     def __init__(self, player1, player2):
+        threading.Thread.__init__(self)
+
         self.size = 15
         #self.board = [[0] * self.size] * self.size
         self.board = [x[:] for x in [[0] * self.size] * self.size]
@@ -90,24 +93,28 @@ class FiveInRow:
         self.changeTurn()
         return True #game continues
 
+    def run(self):
+        while self.tick():
+            print(self.turn)
+            print(str(self))
+        print(str(self))
+
     def __str__(self):
         marks = ['.', 'X', 'O']
         return '\n'.join([''.join([marks[item] for item in row]) for row in self.board])
 
 
 def main():
-    #p1 = HumanPlayer("Mikko")
+    p1 = HumanPlayer("Mikko")
     #p2 = HumanPlayer("Kaisa")
     #p1 = ShallowAiPlayer()
-    p1 = MinimaxPlayer(2)
-    p2 = MinimaxPlayer(3)
+    p1 = MinimaxPlayer(5)
+    p2 = MinimaxPlayer(5)
 
     game = FiveInRow(p1, p2)
 
-    while game.tick():
-        continue
-
-    print(str(game))
+    game.start()
+    game.join()
 
 if __name__ == "__main__":
     main()

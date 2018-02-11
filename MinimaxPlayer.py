@@ -105,6 +105,7 @@ class MinimaxStatus:
         self.board = copy.deepcopy(board)
         self.gameOver = False
         self.turnNo = turnNo
+        self.lastMove = None
 
     def key(self):
         return str(self.board)
@@ -195,6 +196,7 @@ class MinimaxStatus:
 
     def update(self, x, y, player):
         self.board[y][x] = int(player)
+        self.lastMove = (x,y)
         self.turnNo += 1
 
     def evaluateLine(self, line, ev):
@@ -246,7 +248,15 @@ class MinimaxStatus:
             for x in range(self.size):
                 for y in range(self.size):
                     if self.isPossibleMove(x, y):
-                        moves.append((x,y))
+                        xNearLast = x-1 < self.lastMove[0] < x+1
+                        yNearLast = y-1 < self.lastMove[1] < y+1
+                        if xNearLast and yNearLast:
+                            #evaluate moves near last move first,
+                            #as these are potentially good moves for
+                            #alpha-beta cutoff
+                            moves.appendleft((x,y))
+                        else:
+                            moves.append((x,y))
         return moves
 
     def moveNeighbours(self, x0, y0):
