@@ -8,10 +8,7 @@ class FiveInRow(threading.Thread):
         threading.Thread.__init__(self)
 
         self.size = 15
-        #self.board = [[0] * self.size] * self.size
         self.board = [x[:] for x in [[0] * self.size] * self.size]
-        #self.board = []
-        #for _ in range(self.size): self.board.append('.'*self.size)
 
         player1.setNumber(1)
         player2.setNumber(2)
@@ -66,21 +63,27 @@ class FiveInRow(threading.Thread):
 
         return False
 
-    def tick(self):
-        moveDone = False
-        while not moveDone:
-            move = self.players[0].requestMove()
-            if not self.onBoard(*move):
-                continue
+    def requestMove(self):
+        move = self.players[0].requestMove()
+        if not self.onBoard(*move):
+            return None
 
-            if self.getBoardPos(*move) == 0:
-                self.setBoardPos(*move, self.players[0].number)
-                self.turn += 1
-                self.lastMove = move
-                self.moves.append(move)
-                moveDone = True
+        if self.getBoardPos(*move) == 0:
+            self.setBoardPos(*move, self.players[0].number)
+            self.turn += 1
+            self.lastMove = move
+            self.moves.append(move)
+            return move
+        return None
+
+    def tick(self):
+
+        move = None
+        while move is None:
+            move = self.requestMove()
 
         if self.turn >= self.size**2:
+            #map(lambda p: p.notifyDraw(), self.players)
             for player in self.players: player.notifyDraw()
             return False #game over
 
@@ -106,10 +109,7 @@ class FiveInRow(threading.Thread):
 
 def main():
     p1 = HumanPlayer("Mikko")
-    #p2 = HumanPlayer("Kaisa")
-    #p1 = ShallowAiPlayer()
-    p1 = MinimaxPlayer(5)
-    p2 = MinimaxPlayer(5)
+    p2 = HumanPlayer("Kaisa")
 
     game = FiveInRow(p1, p2)
 
