@@ -20,7 +20,7 @@ class FiveInRowCell(QPushButton):
 
 class FiveInRowGui(QWidget):
     startSignal = pyqtSignal()
-    endSignal = pyqtSignal(bool)
+    endSignal = pyqtSignal(int)
 
     def __init__(self):
 
@@ -33,34 +33,41 @@ class FiveInRowGui(QWidget):
         self.grid.setSpacing(0)
         self.setLayout(self.grid)
 
-        self.board = None
+        self.player = None
         self.move = None
 
         self.setWindowTitle('FiveInRow')
         self.show()
 
+        self.symbols = [' ', 'X', 'O']
+        self.colors = ['black', 'red', 'blue']
+
+    def colorToStyle(self, color):
+        return 'QPushButton {color: ' + color + '; font-size: 24pt;}'
 
     def cellClicked(self):
         if self.move is None:
             self.move = self.sender().getCoordinates()
+        if self.player is not None:
+            idx = self.player.number
+            self.sender().setText(self.symbols[idx])
+            self.sender().setStyleSheet(self.colorToStyle(self.colors[idx]))
         print(self.move)
 
-    def startTurn(self, board):
+    def startTurn(self, player):
         #self.constructBoard(board)
         self.move = None
-        self.board = board
+        self.player = player
         self.startSignal.emit()
 
     def getMove(self):
         return self.move
 
-    def endGame(self, didWin):
+    def endGame(self, winner):
         msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
 
-        icon = QMessageBox.Information if didWin else QMessageBox.Critical
-        msg.setIcon(icon)
-
-        txt = "You win!" if didWin else "You lost!"
+        txt = "It's a draw!" if winner == 0 else "Player" + winner + " wins!"
         msg.setText(txt)
         msg.setWindowTitle(txt)
 
@@ -70,22 +77,15 @@ class FiveInRowGui(QWidget):
         msg.exec_()
 
     def constructBoard(self):
-        if self.board is None:
+        if self.player is None:
             return
 
-        symbols = [' ', 'X', 'O']
-        styles = [
-            'QPushButton {color: black; font-size: 24pt;}',
-            'QPushButton {color: red; font-size: 24pt;}',
-            'QPushButton {color: blue; font-size: 24pt;}',
-        ]
-
-        for x,row in enumerate(self.board):
+        for x,row in enumerate(self.player.game.board):
             for y,cell in enumerate(row):
 
-                cellButton = FiveInRowCell(symbols[cell], x, y)
+                cellButton = FiveInRowCell(self.symbols[cell], x, y)
                 cellButton.setFixedSize(50,50)
-                cellButton.setStyleSheet(styles[cell])
+                cellButton.setStyleSheet(self.colorToStyle(self.colors[cell]))
                 cellButton.clicked.connect(self.cellClicked)
                 self.grid.addWidget(cellButton, x, y)
 
@@ -95,7 +95,7 @@ class QtPlayer(FiveInRowPlayer):
         self.gui = gui
 
     def requestMove(self):
-        self.gui.startTurn(self.game.board)
+        self.gui.startTurn(self)
         move = None
         while move is None:
             sleep(0.2)
@@ -103,10 +103,14 @@ class QtPlayer(FiveInRowPlayer):
         return move
 
     def notifyWin(self):
-        self.gui.endSignal.emit(True)
+        self.gui.endSignal.emit(self.number)
 
     def notifyLoss(self):
-        self.gui.endSignal.emit(False)
+        pass
+
+    def notifyDraw(self):
+        if self.number == 1:
+            self.gui.endSignal.emit(0)
 
 
 if __name__ == '__main__':
@@ -115,12 +119,11 @@ if __name__ == '__main__':
     gamegui = FiveInRowGui()
 
     p1 = QtPlayer(gamegui)
-    p2 = MinimaxPlayer(3)
+    #p2 = QtPlayer(gamegui)
+    p2 = MinimaxPlayer(5)
 
     game = FiveInRow(p1, p2)
-
     game.start()
-
 
     sys.exit(app.exec_())
     game.join()
