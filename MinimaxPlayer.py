@@ -77,6 +77,7 @@ class MinimaxPlayer(FiveInRowPlayer):
     def requestMove(self):
         if self.game.lastMove is not None:
             self.gameStatus.update(*(self.game.lastMove), self.opponentNumber)
+            print(self.gameStatus.possibleMoves)
 
         self.nodeNo = 0
 
@@ -102,10 +103,19 @@ class MinimaxPlayer(FiveInRowPlayer):
 class MinimaxStatus:
     def __init__(self, board, turnNo):
         self.size = len(board)
-        self.board = copy.deepcopy(board)
+        self.board = [x[:] for x in [[0] * self.size] * self.size]
         self.gameOver = False
         self.turnNo = turnNo
         self.lastMove = None
+
+        mid = int(self.size/2)
+        self.possibleMoves = deque()
+        self.possibleMoves.append((mid,mid))
+
+        for x in range(self.size):
+            for y in range(self.size):
+                if board[y][x] != 0:
+                    self.update(x,y,int(board[y][x]))
 
     def key(self):
         return str(self.board)
@@ -194,9 +204,21 @@ class MinimaxStatus:
 
         return strdiag
 
-    def update(self, x, y, player):
-        self.board[y][x] = int(player)
-        self.lastMove = (x,y)
+    def update(self, x0, y0, player):
+        self.board[y0][x0] = int(player)
+
+        for x in range(x0-1, x0+2):
+            for y in range(y0-1, y0+2):
+                if not self.onBoard(x,y):
+                    continue
+                elif self.board[y][x] == 0 and self.possibleMoves.count((x,y)) == 0:
+                    self.possibleMoves.appendleft((x,y))
+
+        try:
+            self.possibleMoves.remove((x0,y0))
+        except(ValueError):
+            pass
+        self.lastMove = (x0,y0)
         self.turnNo += 1
 
     def evaluateLine(self, line, ev):
@@ -224,52 +246,8 @@ class MinimaxStatus:
 
         return
 
-    def isPossibleMove(self, x0, y0):
-        if self.board[y0][x0] != 0:
-            return False
-
-        for x in range(x0-1, x0+2):
-            for y in range(y0-1, y0+2):
-                if (x, y) == (x0, y0):
-                    continue
-                if not self.onBoard(x,y):
-                    continue
-                if self.board[y][x] != 0:
-                    return True
-        return False
-
     def getPossibleMoves(self):
-        moves = deque()
-
-        if self.turnNo == 0:
-            mid = int(self.size/2)
-            moves.append((mid,mid))
-        else:
-            for x in range(self.size):
-                for y in range(self.size):
-                    if self.isPossibleMove(x, y):
-                        xNearLast = x-1 < self.lastMove[0] < x+1
-                        yNearLast = y-1 < self.lastMove[1] < y+1
-                        if xNearLast and yNearLast:
-                            #evaluate moves near last move first,
-                            #as these are potentially good moves for
-                            #alpha-beta cutoff
-                            moves.appendleft((x,y))
-                        else:
-                            moves.append((x,y))
-        return moves
-
-    def moveNeighbours(self, x0, y0):
-        neighbours = set()
-        for x in range(x0-1, x0+2):
-            for y in range(y0-1, y0+2):
-                if (x, y) == (x0, y0):
-                    continue
-                if not self.onBoard(x,y):
-                    continue
-                if self.board[y][x] == 0:
-                    neighbours.add((x,y))
-        return neighbours
+        return self.possibleMoves
 
     def __str__(self):
         marks = ['.', 'X', 'O']
