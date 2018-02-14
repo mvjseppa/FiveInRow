@@ -1,5 +1,5 @@
 import copy
-from collections import deque
+from collections import OrderedDict, deque
 from FiveInRowPlayers import FiveInRowPlayer
 
 class MinimaxPlayer(FiveInRowPlayer):
@@ -109,8 +109,7 @@ class MinimaxStatus:
         self.lastMove = None
 
         mid = int(self.size/2)
-        self.possibleMoves = deque()
-        self.possibleMoves.append((mid,mid))
+        self.possibleMoves = [(mid,mid)]
 
         for x in range(self.size):
             for y in range(self.size):
@@ -159,40 +158,21 @@ class MinimaxStatus:
             score = 1000
 
         elif ev[nextPlr].openFours > 0 or ev[nextPlr].fours > 0:
-            score = -100
+            score = -900
 
         elif ev[lastPlr].openFours > 0:
-            score = 100
+            score = 800
 
         elif ev[nextPlr].openThrees > 0 and ev[lastPlr].fours == 0:
-            score = -50
+            score = -100 * ev[nextPlr].openThrees
 
         elif ev[lastPlr].openThrees + ev[lastPlr].fours > 1:
-            score = 50
+            score = 100 * (ev[lastPlr].openThrees + ev[lastPlr].fours)
 
         else:
-            score = 10 * ev[lastPlr].openThrees + ev[lastPlr].openTwos
+            score = 10 * ev[lastPlr].openThrees + ev[lastPlr].openTwos - ev[nextPlr].openTwos
 
-        if maximizing: return -1 * score
-        return score
-
-
-    def diagonalStartingPoints(self, x, y):
-        x1, y1, x2, y2 = 0, 0, 0, 0
-
-        if x >= y:
-            x1, y1 = x-y, 0
-        else:
-            x1, y1 = 0, y-x
-
-        end = self.size - 1
-        x_ = end - x
-        if x_ <= y:
-            x2, y2 = end, y-x_
-        else:
-            x2, y2 = x+y, 0
-
-        return ((x1, y1), (x2, y2))
+        return -score if maximizing else score
 
     def getDiagonal(self, x0, y0, dx, dy):
         strdiag = ''
@@ -204,11 +184,16 @@ class MinimaxStatus:
 
         return strdiag
 
+
     def update(self, x0, y0, player):
         self.board[y0][x0] = int(player)
 
-        for x in range(x0-1, x0+2):
-            for y in range(y0-1, y0+2):
+        self.possibleMoves = self.getPriorityMoves(x0,y0) + self.possibleMoves
+        self.possibleMoves = list(OrderedDict.fromkeys(self.possibleMoves))
+
+        neighbours = lambda p: [p-1, p, p+1]
+        for x in neighbours(x0):
+            for y in neighbours(y0):
                 if not self.onBoard(x,y):
                     continue
                 elif self.board[y][x] == 0 and self.possibleMoves.count((x,y)) == 0:
@@ -220,6 +205,32 @@ class MinimaxStatus:
             pass
         self.lastMove = (x0,y0)
         self.turnNo += 1
+
+
+    def getPriorityMoves(self, x0, y0):
+        moves = []
+        dirs = [
+            lambda x,y: (x+1, y),
+            lambda x,y: (x-1, y),
+            lambda x,y: (x, y+1),
+            lambda x,y: (x, y-1),
+            lambda x,y: (x+1, y+1),
+            lambda x,y: (x-1, y+1),
+            lambda x,y: (x+1, y-1),
+            lambda x,y: (x-1, y-1)
+        ]
+
+        for d in dirs:
+            x,y = x0, y0
+            while self.onBoard(x,y):
+                if self.board[y][x] == 0:
+                    moves.append((x,y))
+                    break
+                x,y = d(x,y)
+
+        return moves
+
+
 
     def evaluateLine(self, line, ev):
 
@@ -247,7 +258,7 @@ class MinimaxStatus:
         return
 
     def getPossibleMoves(self):
-        return self.possibleMoves
+        return deque(self.possibleMoves)
 
     def __str__(self):
         marks = ['.', 'X', 'O']
