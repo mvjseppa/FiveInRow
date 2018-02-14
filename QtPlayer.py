@@ -35,6 +35,7 @@ class FiveInRowGui(QWidget):
 
         self.player = None
         self.move = None
+        self.gameOver = False
 
         self.setWindowTitle('FiveInRow')
         self.show()
@@ -64,10 +65,15 @@ class FiveInRowGui(QWidget):
         return self.move
 
     def endGame(self, winner):
+        if self.gameOver:
+            return
+
+        self.gameOver = True
+
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
 
-        txt = "It's a draw!" if winner == 0 else "Player" + winner + " wins!"
+        txt = "It's a draw!" if winner == 0 else "Player" + str(winner) + " wins!"
         msg.setText(txt)
         msg.setWindowTitle(txt)
 
@@ -103,10 +109,12 @@ class QtPlayer(FiveInRowPlayer):
         return move
 
     def notifyWin(self):
+        self.gui.startTurn(self)
         self.gui.endSignal.emit(self.number)
 
     def notifyLoss(self):
-        pass
+        self.gui.startTurn(self)
+        self.gui.endSignal.emit(self.opponentNumber)
 
     def notifyDraw(self):
         if self.number == 1:
